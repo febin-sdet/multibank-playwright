@@ -115,3 +115,89 @@ data `data/spot-market.ts`).
 
 Expected data: `data/edge.ts`. Reuses `pages/top-nav.ts` (extended with `mobileMenu`
 helpers) and `data/nav-data.ts`.
+
+---
+
+# Task 2 — QA Strategy & Thinking
+
+**Scenario:** first QA hire at a fintech startup. A mobile trading app (iOS + Android)
+is two weeks from its first public release. No existing test suite, no QA docs, the
+dev team has been shipping fast, and real user funds are involved.
+
+## 1. Where do you start?
+
+I wouldn't start by writing tests. First I'd figure out how the app makes and moves
+money — signing up, depositing, placing a trade, withdrawing, and where the balance is
+shown. Those are the parts that matter. I'd talk to the founders and devs to understand
+what they're most worried about and what (if anything) is already tested. I'd get
+access to a test environment, test accounts, and the crash/error logs. Then I'd just
+use the app on both iOS and Android like a real user and write down every bug and
+question. By the end of week one I'd have a ranked list of risks and an honest opinion
+on whether two weeks is realistic or the scope needs trimming.
+
+## 2. How would you approach testing it?
+
+Focus on the highest-risk stuff first: anything where a user could lose money or get
+locked out. I'd rank features into "must be perfect" (login, deposits, withdrawals,
+placing orders, balance accuracy, fees) and "less critical" (settings, styling).
+
+Most of the real logic is on the backend, so I'd test the money-related APIs directly —
+checking things like: does it handle a double-tap on "Buy" without placing two orders,
+does it reject bad input, does the balance always match. On the app itself I'd do
+hands-on exploratory testing plus run the main flows on a few real devices. I'd also
+check security basics (how login tokens are stored, session timeout), what happens when
+the network drops mid-trade, and app updates for someone already logged in. Only a tiny
+bit of automation early — a quick smoke check that runs on every build.
+
+## 3. What does QA look like in a sprint?
+
+QA is involved from the start, not just at the end.
+
+- **Ticket stage:** I help write clear acceptance criteria and ask "how could this
+  break, how do we undo it if it goes wrong."
+- **Before coding:** quick chat with the dev and PM to agree on edge cases and what
+  data/environment we'll need.
+- **While it's being built:** I write my test notes and prep test data.
+- **When it's ready:** the dev gives me a build, I test against the acceptance
+  criteria, poke around the edges, and check it didn't break anything nearby.
+- **Bugs:** severity is based on money/security impact, not looks. Fixed within the
+  sprint if it's serious.
+- **Done means:** works on both platforms, no serious bugs open, smoke test updated,
+  and there's a way to turn the feature off if needed.
+- **Regression:** a bit every merge (automated smoke), and a focused manual pass on the
+  release build covering what changed plus the critical money flows — not re-testing
+  everything.
+
+## 4. What does your ideal regression suite look like?
+
+Layered, and fast where it counts:
+
+- **Lots of small unit tests** on the money math (rounding, fees, currency) — cheap and
+  catch the scariest bugs.
+- **API tests** for the key journeys: fund, trade, cancel, withdraw, check balance.
+  Stable and quick — this is the core of regression.
+- **A small set of UI tests** on real devices for the handful of flows a user can't
+  live without (login, view portfolio, place/cancel order, withdrawal).
+- Plus checks for security and for the balance always reconciling.
+
+Rules: tests must be reliable (no random failures — flaky tests get fixed or deleted),
+run automatically, and every bug that reaches production becomes a new test so it can't
+come back.
+
+## 5. What would keep you up at night?
+
+- **Money being quietly wrong** — a rounding bug or a balance that looks right but
+  isn't. Users won't notice for days and won't forgive it.
+- **Duplicate transactions** — bad signal plus a retry placing two orders, or the app
+  dying mid-trade.
+- **Account takeover** — weak login, token storage, or an account-recovery flow someone
+  could trick their way through.
+- **No emergency brake** — can we actually stop trading or withdrawals and roll back if
+  something goes wrong on launch night? Will we find out from an alert or from angry
+  users online?
+- **The timeline** — no tests, a fast-moving team, one QA person. There's a lot we
+  won't have checked.
+- **Compliance** — KYC, which countries it's allowed in, record-keeping. Getting that
+  wrong can sink a startup.
+- **App Store review** — finance apps get extra scrutiny; a rejection at day 13 blows
+  the date.
